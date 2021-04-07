@@ -221,6 +221,61 @@ fork(void)
   return pid;
 }
 
+int
+clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack){
+  int i, pid;
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  if(((uint)stack % PGSIZE) != 0) {      // CHECKING if stack is page aligned
+    return -1;
+  }
+
+  // Checking if stack is not less than a page
+  if((curproc->sz - (uint)stack) < PGSIZE) {
+    return -1;
+  }
+
+  // Allocate process.
+  if((np = allocproc()) == 0){
+    return -1;
+  }
+  np->pgdir = curproc->pgdir; // Child points to the same address space as parent
+  int user_stack[3];
+  uint stack_pointer = (uint)stack + PGSIZE;
+  user_stack[0] = 0xffffffff;
+  user_stack[1] = (uint)arg1;
+  user_stack[2] = (uint)arg2;
+  stack_pointer -= 3*sizeof(uint);
+  
+  if (copyout(np->pgdir, stack_pointer, user_stack, 12) < 0)
+    return -1;
+
+  np->stack = stack;  // The thread's stack
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
+  np->is_thread = 1;
+  
+  // Clear %eax so that fork returns 0 in the child.
+  np->tf->eax = 0;
+
+  np->tf->esp = (uint)stack_pointer;
+  np->tf->eip = (uint)fcn;
+
+  for(i = 0; i < NOFILE; i++)
+    if(curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  np->cwd = idup(curproc->cwd);
+
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+  pid = np->pid;
+  acquire(&ptable.lock);
+  np->state = RUNNABLE;
+  release(&ptable.lock);
+  return pid;
+}
+
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
