@@ -366,6 +366,10 @@ wait(void)
   }
 }
 
+int join(void **stack){
+  
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
