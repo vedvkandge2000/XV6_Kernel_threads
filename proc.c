@@ -367,7 +367,7 @@ wait(void)
 }
 
 int join(void **stack){
-  
+  return 0;
 }
 
 //PAGEBREAK: 42
