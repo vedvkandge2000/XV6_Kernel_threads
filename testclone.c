@@ -4,23 +4,28 @@
 #include "mmu.h"
 
 void
-Hello(void *arg1, void *arg2)
-{
-    // printf(1,"hello %d %d\n", *(int*)arg1, *(int*)arg2);
-    printf(1,"hello %s %s\n", (char*)arg1, (char*)arg2);
+Addition(void *arg1, void *arg2)
+{   
+    // int result = ((*(int*)arg1) + (*(int*)arg2));
+    printf(1,"Hello is %d %d.\n",*(int*)arg1, *(int*)arg2);
+    // printf(1,"hello %s %s\n", (char*)arg1, (char*)arg2);
     exit();  
 }
 
 int
 main(int argc, char *argv[])
 {
-//   int arg1 = 1;
-//   int arg2 = 2;
-    char arg1[7] = "Vedant";
-    char arg2[7] = "Kandge";
-    char *stack = sbrk(PGSIZE);
-    int r = clone(&Hello,arg1,arg2,stack);
-    sleep(5);
-    printf(1,"Pid:%d\n", r);
+    int ppid = getpid();
+    int arg1 = 10;
+    int arg2 = 20;
+    // char arg1[7] = "Vedant";
+    // char arg2[7] = "Kandge";
+    printf(1, "Parent PID : %d\n\n", ppid);
+    int thread_pid1 = thread_create(Addition, &arg1, &arg2);
+    printf(1, "Created thread 1. PID : %d\n\n", thread_pid1);
+    // assert(thread_pid1 > 0);
+    sleep(100);
+    int join_pid = thread_join();
+    printf(1, "Joined : %d\n", join_pid);
     exit();
 }
