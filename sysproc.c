@@ -115,3 +115,14 @@ int sys_join(void){
     return -1;
   return join(stack);
 }
+
+int
+sys_gettid(void)
+{
+  if((myproc()->is_thread == 1)){
+    return myproc()->pid;
+  }
+  else{
+     return -1;
+  }
+}

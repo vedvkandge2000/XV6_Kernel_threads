@@ -25,6 +25,7 @@ int sleep(int);
 int uptime(void);
 int clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack); //Prototype for clone sys call
 int join(void **stack); //Prototype for join sys call
+int gettid(void); //Prototype for getttid system call
 
 // ulib.c
 int stat(const char*, struct stat*);
