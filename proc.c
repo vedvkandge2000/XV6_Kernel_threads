@@ -223,7 +223,7 @@ fork(void)
 
 int
 clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack){
-  int i, pid;
+  int i, tid;
   struct proc *np;
   struct proc *curproc = myproc();
 
@@ -269,11 +269,13 @@ clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack){
   np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
-  pid = np->pid;
+  np->tid = np->pid;
+  np->pid = curproc->pid;
+  tid = np->tid;
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   release(&ptable.lock);
-  return pid;
+  return tid;
 }
 
 // Exit the current process.  Does not return.
@@ -341,7 +343,7 @@ wait(void)
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
-        pid = p->pid;
+        pid = p->tid;
         kfree(p->kstack);
         p->kstack = 0;
         freevm(p->pgdir);
@@ -368,7 +370,7 @@ wait(void)
 
 int join(void **stack){
   struct proc *p;
-  int havekids, pid;
+  int havekids, tid;
   struct proc *curproc = myproc();
   
   acquire(&ptable.lock);
@@ -381,17 +383,18 @@ int join(void **stack){
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
-        pid = p->pid;
+        tid = p->tid;
         kfree(p->kstack);
         p->kstack = 0;
         p->pid = 0;
+        p->tid = 0;
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
         *stack = p->stack;
         release(&ptable.lock);
-        return pid;
+        return tid;
       }
     }
 
@@ -580,6 +583,26 @@ kill(int pid)
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
+      p->killed = 1;
+      // Wake process from sleep if necessary.
+      if(p->state == SLEEPING)
+        p->state = RUNNABLE;
+      release(&ptable.lock);
+      return 0;
+    }
+  }
+  release(&ptable.lock);
+  return -1;
+}
+
+int
+kill_thread(int tid)
+{
+  struct proc *p;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->tid == tid){
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING)

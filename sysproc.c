@@ -120,9 +120,19 @@ int
 sys_gettid(void)
 {
   if((myproc()->is_thread == 1)){
-    return myproc()->pid;
+    return myproc()->tid;
   }
   else{
      return -1;
   }
+}
+
+int
+sys_kill_thread(void)
+{
+  int tid;
+
+  if(argint(0, &tid) < 0)
+    return -1;
+  return kill_thread(tid);
 }

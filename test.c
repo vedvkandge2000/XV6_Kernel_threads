@@ -9,9 +9,11 @@ print_result(void *result){
 }
 void
 print_args(void *arg1, void *arg2){
-    printf(1,"----%d %d----\n", *(int*)arg1, *(int*)arg2);
+    
     int tid = gettid();
     printf(1,"TID => %d\n", tid);
+    thread_kill(tid);
+    printf(1,"----%d %d----\n", *(int*)arg1, *(int*)arg2);
     exit();
 }
 
@@ -55,6 +57,8 @@ main(int argc, char *argv[])
     int thread_pid1 = thread_create(&Addition, &arg1, &arg2);
     int join_pid1 = thread_join();
     int thread_pid2 = thread_create(&print_args, &arg1, &arg2);
+    // int join_pid1 = thread_join();
+    
     int join_pid2 = thread_join();
     
     printf(1, "Created thread=> PID : %d\n", thread_pid1);

@@ -107,3 +107,13 @@ int thread_join(){
   free(stack);
   return pid;
 }
+
+int thread_kill(int tid){
+  int x = kill_thread(tid);
+  if(x == -1){
+    printf(1,"Invlid TID: Thread does not exist\n");
+    return -1;
+  }
+  return 0;
+  
+}
