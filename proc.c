@@ -257,7 +257,7 @@ clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack){
   *np->tf = *curproc->tf;
   np->is_thread = 1;
   
-  // Clear %eax so that fork returns 0 in the child.
+  // Clear %eax so that clone returns 0 in the child.
   np->tf->eax = 0;
 
   np->tf->esp = (uint)stack_pointer;
