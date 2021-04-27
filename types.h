@@ -2,4 +2,8 @@ typedef unsigned int   uint;
 typedef unsigned short ushort;
 typedef unsigned char  uchar;
 typedef uint pde_t;
-// #define NULL (0)
+
+typedef struct t_lock {
+  uint is_locked;
+} t_lock;
+

@@ -106,20 +106,3 @@ memmove(void *vdst, const void *vsrc, int n)
   return vdst;
 }
 
-// int thread_create(void (*func)(void *, void *), void* arg1, void* arg2){
-//   void *stack = malloc(PGSIZE);
-//   // Checking if stack is page aligned or not
-//   if((uint)stack % PGSIZE != 0) {
-//     free(stack);
-//     stack = malloc(2 * PGSIZE); //guard page
-//     stack = stack + (PGSIZE - (uint)stack % PGSIZE);
-//   }
-//   int pid = clone(func, arg1,arg2, stack);
-//   return pid;
-// }
-// int thread_join(){
-//   void *stack;
-//   int pid = join(&stack);
-//   free(stack);
-//   return pid;
-// }

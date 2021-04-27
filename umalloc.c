@@ -2,6 +2,7 @@
 #include "stat.h"
 #include "user.h"
 #include "param.h"
+#include "x86.h"
 #define PGSIZE 4096 
 
 // Memory allocator by Kernighan and Ritchie,
@@ -115,5 +116,14 @@ int thread_kill(int tid){
     return -1;
   }
   return 0;
-  
+}
+
+void lock_init(t_lock *lock){
+  lock->is_locked = 0;
+}
+void t_acquire(t_lock *lock){
+  while(xchg(&lock->is_locked,1));
+}
+void t_release(t_lock *lock){
+  lock->is_locked = 0;
 }
