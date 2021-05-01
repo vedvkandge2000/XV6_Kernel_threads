@@ -129,7 +129,6 @@ main(int argc, char *argv[])
     
     //Test2
     lock_init(&lock);
-    // arg arg2 = {pid};
     int a = 0;
     int count = 0;
     int tid;
