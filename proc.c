@@ -222,7 +222,7 @@ fork(void)
 }
 
 int
-clone(void(*fcn)(void *), void *args, void *stack){
+clone(void(*fcn)(void *), void *args, void *stack, int flag){
   int i, tid;
   struct proc *np;
   struct proc *curproc = myproc();
@@ -240,7 +240,19 @@ clone(void(*fcn)(void *), void *args, void *stack){
   if((np = allocproc()) == 0){
     return -1;
   }
-  np->pgdir = curproc->pgdir; // Child points to the same address space as parent
+
+  if(flag & CLONE_VM){
+    np->pgdir = curproc->pgdir;
+  }
+  else{
+    if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+      kfree(np->kstack);
+      np->kstack = 0;
+      np->state = UNUSED;
+      return -1;
+    }
+  }
+   // Child points to the same address space as parent
   int user_stack[2];
   uint stack_pointer = (uint)stack + PGSIZE;
   user_stack[0] = 0xffffffff;
@@ -262,14 +274,27 @@ clone(void(*fcn)(void *), void *args, void *stack){
   np->tf->esp = (uint)stack_pointer;
   np->tf->eip = (uint)fcn;
 
-  for(i = 0; i < NOFILE; i++)
-    if(curproc->ofile[i])
-      np->ofile[i] = filedup(curproc->ofile[i]);
+  if(flag & CLONE_FS){
+    for(i = 0; i < NOFILE; i++)
+      if(curproc->ofile[i])
+        np->ofile[i] = curproc->ofile[i];
+  }
+  else{
+    for(i = 0; i < NOFILE; i++)
+      if(curproc->ofile[i])
+        np->ofile[i] = filedup(curproc->ofile[i]);
+  }
   np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
   np->tid = np->pid;
-  np->pid = curproc->pid;
+  if(flag & CLONE_THREAD){
+    np->pid = curproc->pid;
+  }
+  else{
+    np->pid = np->pid;
+  }
   tid = np->tid;
   acquire(&ptable.lock);
   np->state = RUNNABLE;

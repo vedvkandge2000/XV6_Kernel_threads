@@ -58,11 +58,11 @@ print_args(void *arg1){
 }
 
 void
-print_num(void *arg1){
+print_num(){
     t_acquire(&lock);
-    arg *ptr = (arg*)arg1;
+    int pid = getpid();
     int tid = gettid();
-    printf(1, "ppid: %d , Tid: %d\n", ptr->a, tid);
+    printf(1, "Pid: %d , Tid: %d\n", pid, tid);
     t_release(&lock);
     exit();
 }
@@ -129,13 +129,13 @@ main(int argc, char *argv[])
     
     //Test2
     lock_init(&lock);
-    arg arg2 = {pid};
+    // arg arg2 = {pid};
     int a = 0;
     int count = 0;
     int tid;
     while (1)
     {
-        tid = thread_create(print_num, &arg2);
+        tid = thread_create(print_num, NULL);
         t_acquire(&lock);
         if (tid == -1)
         {
@@ -163,7 +163,7 @@ main(int argc, char *argv[])
      
     for (int i = 0; i < 3; i++) { 
         int thread_pid = thread_create(Multiply,NULL); 
-        printf(1, "Created thread=> PID : %d\n", thread_pid);
+        printf(1, "Created thread=> TID : %d\n", thread_pid);
     } 
   
     for (int i = 0; i < 3; i++){
