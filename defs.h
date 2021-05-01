@@ -120,7 +120,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-int clone(void(*)(void*, void*), void*, void*, void*);
+int clone(void(*)(void*), void*, void*);
 int join(void **stack);
 int kill_thread(int);
 

@@ -222,7 +222,7 @@ fork(void)
 }
 
 int
-clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack){
+clone(void(*fcn)(void *), void *args, void *stack){
   int i, tid;
   struct proc *np;
   struct proc *curproc = myproc();
@@ -241,14 +241,13 @@ clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack){
     return -1;
   }
   np->pgdir = curproc->pgdir; // Child points to the same address space as parent
-  int user_stack[3];
+  int user_stack[2];
   uint stack_pointer = (uint)stack + PGSIZE;
   user_stack[0] = 0xffffffff;
-  user_stack[1] = (uint)arg1;
-  user_stack[2] = (uint)arg2;
-  stack_pointer -= 3*sizeof(uint);
+  user_stack[1] = (uint)args;
+  stack_pointer -= 2*sizeof(uint);
   
-  if (copyout(np->pgdir, stack_pointer, user_stack, 12) < 0)
+  if (copyout(np->pgdir, stack_pointer, user_stack, 8) < 0)
     return -1;
 
   np->stack = stack;  // The thread's stack
@@ -313,11 +312,6 @@ exit(void)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == curproc){
       p->parent = initproc;
-      if(p->is_thread == 1){ // clean up the kernel stack of child threads
-        p->state = UNUSED;
-        kfree(p->kstack);
-        p->kstack = 0;
-      }
       if(p->state == ZOMBIE)
         wakeup1(initproc);
     }

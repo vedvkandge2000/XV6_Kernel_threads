@@ -24,7 +24,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int clone(void(*fcn)(void *, void *), void *arg1, void *arg2, void *stack); //Prototype for clone sys call
+int clone(void(*fcn)(void *), void *args, void *stack); //Prototype for clone sys call
 int join(void **stack); //Prototype for join sys call
 int gettid(void); //Prototype for getttid system call
 int kill_thread(int);
@@ -47,6 +47,6 @@ void t_acquire(t_lock *lock);
 void t_release(t_lock *lock);
 
 
-int thread_create(void (*func)(void *, void *), void* arg1, void* arg2);
+int thread_create(void (*func)(void *), void* args);
 int thread_join();
 int thread_kill(int tid);
