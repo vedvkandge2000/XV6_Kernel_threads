@@ -2,6 +2,12 @@
 #include "stat.h"
 #include "user.h"
 #include "mmu.h"
+typedef struct arg
+{
+    int a;
+    int b;
+}arg;
+
 t_lock lock;
 int global = 0;
 #define NULL (0)
@@ -22,7 +28,7 @@ int M2[3][1] = {
     {1}
 };
 
-void Multiply(void* arg1, void* arg2) 
+void Multiply() 
 { 
     int core = count++; 
     for (int i = core * r1 / 3; i < (core + 1) * r1 / 3; i++){
@@ -40,21 +46,23 @@ print_result(void *result){
 }
 
 void
-print_args(void *arg1, void *arg2){
+print_args(void *arg1){
     
+    arg *ptr = (arg*)arg1;
     int tid = gettid();
     int pid = getpid();
     printf(1,"PID is %d and TID is %d\n",pid,tid);
     thread_kill(tid);
-    printf(1,"----%d %d----\n", *(int*)arg1, *(int*)arg2);
+    printf(1,"----%d %d----\n", ptr->a, ptr->b);
     exit();
 }
 
 void
-print_num(void *arg1, void *arg2){
+print_num(void *arg1){
     t_acquire(&lock);
+    arg *ptr = (arg*)arg1;
     int tid = gettid();
-    printf(1, "ppid: %d , Tid: %d\n", *(int*)arg1, tid);
+    printf(1, "ppid: %d , Tid: %d\n", ptr->a, tid);
     t_release(&lock);
     exit();
 }
@@ -69,12 +77,13 @@ int check_even(int a){
 }
 
 void
-Addition(void *arg1, void *arg2)
+Addition(void *arg1)
 {   
+    arg *ptr = (arg*)arg1;
     int tid = gettid();
     int pid = getpid();
     printf(1,"PID is %d and TID is %d\n",pid,tid);
-    int result = *(int*)arg1 + *(int*)arg2;
+    int result = ptr->a + ptr->b;
     print_result(&result);
     if(check_even(result)){
         printf(1,"Result in Even\n");
@@ -86,7 +95,7 @@ Addition(void *arg1, void *arg2)
 }
 
 void
-test_sync(void *arg1, void *arg2)
+test_sync()
 {   
     t_acquire(&lock);
     global = global * 4;
@@ -94,7 +103,7 @@ test_sync(void *arg1, void *arg2)
     exit();  
 }
 void
-test_sync2(void *arg1, void *arg2)
+test_sync2()
 {   
     t_acquire(&lock);
     global = global + 2;
@@ -106,30 +115,27 @@ int
 main(int argc, char *argv[])
 {
     int pid = getpid();
-    int arg1 = 10;
-    int arg2 = 20;
+    arg arg1 = {10,20};
     printf(1, "Parent PID : %d\n", pid);
     //Test1
-    int thread_tid1 = thread_create(Addition, &arg1, &arg2);
+    int thread_tid1 = thread_create(Addition, &arg1);
     int join_tid1 = thread_join();
-    int thread_tid2 = thread_create(print_args, &arg1, &arg2);
+    int thread_tid2 = thread_create(print_args, &arg1);
     int join_tid2 = thread_join();
     if(thread_tid1 == join_tid1 && thread_tid2 == join_tid2){
         printf(1,"Test1 Passes\n\n");
     }
-    // printf(1, "Created thread=> PID : %d\n", thread_tid1);
-    // printf(1, "Created thread=> PID : %d\n", thread_tid2);
-    // printf(1, "Joined1 : %d\n", join_tid1);
-    // printf(1, "Joined2 : %d\n", join_tid2);
+    
     
     //Test2
     lock_init(&lock);
+    arg arg2 = {pid};
     int a = 0;
     int count = 0;
     int tid;
     while (1)
     {
-        tid = thread_create(print_num, &pid, &a);
+        tid = thread_create(print_num, &arg2);
         t_acquire(&lock);
         if (tid == -1)
         {
@@ -148,16 +154,15 @@ main(int argc, char *argv[])
     printf(1, "Total thread Created: %d\n",count);
     printf(1,"Test2 Passes\n\n");
 
-    //Test3
+    // //Test3
     if (r2 != c1) { 
         printf(1,"Multicantion can not be performed\n"); 
         exit(); 
     }
-    arg1 = 0;
-    arg2 = 0;
+    
      
     for (int i = 0; i < 3; i++) { 
-        int thread_pid = thread_create(Multiply,&arg1,&arg2); 
+        int thread_pid = thread_create(Multiply,NULL); 
         printf(1, "Created thread=> PID : %d\n", thread_pid);
     } 
   
@@ -175,10 +180,10 @@ main(int argc, char *argv[])
     }
     printf(1,"Test3 Passes\n\n");
 
-    //Test4
+    // //Test4
     
-    int t_tid1 = thread_create(test_sync, &arg1, &arg2);
-    int t_tid2 = thread_create(test_sync2, &arg1, &arg2);
+    int t_tid1 = thread_create(test_sync, NULL);
+    int t_tid2 = thread_create(test_sync2, NULL);
     int join_t_tid1 = thread_join();
     int join_t_tid2 = thread_join();
     if(t_tid1 == join_t_tid1 && t_tid2 == join_t_tid2){
