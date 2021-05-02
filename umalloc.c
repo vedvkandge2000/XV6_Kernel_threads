@@ -99,7 +99,7 @@ int thread_create(void (*func)(void *), void* args){
     stack = malloc(2 * PGSIZE); //guard page
     stack = stack + (PGSIZE - (uint)stack % PGSIZE);
   }
-  int pid = clone(func, args, stack, CLONE_VM);
+  int pid = clone(func, args, stack, CLONE_VM | CLONE_FILES);
   return pid;
 }
 int thread_join(){

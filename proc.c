@@ -6,6 +6,15 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+struct file {
+  enum { FD_NONE, FD_PIPE, FD_INODE } type;
+  int ref; // reference count
+  char readable;
+  char writable;
+  struct pipe *pipe;
+  struct inode *ip;
+  uint off;
+};
 
 struct {
   struct spinlock lock;
@@ -247,7 +256,6 @@ clone(void(*fcn)(void *), void *args, void *stack, int flag){
   }
   else{
     if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
-      cprintf("....ERROR....\n");
       kfree(np->kstack);
       np->kstack = 0;
       np->state = UNUSED;
@@ -281,9 +289,25 @@ clone(void(*fcn)(void *), void *args, void *stack, int flag){
   np->tf->esp = (uint)stack_pointer;
   np->tf->eip = (uint)fcn;
 
-  for(i = 0; i < NOFILE; i++)
-    if(curproc->ofile[i])
-      np->ofile[i] = filedup(curproc->ofile[i]);
+  if(flag & CLONE_FILES){
+    for(i = 0; i < NOFILE; i++)
+      if(curproc->ofile[i])
+        np->ofile[i] = filedup(curproc->ofile[i]);
+  }
+  else{
+    for(i = 0; i < NOFILE; i++){
+      if(curproc->ofile[i]){
+        if((np->ofile[i] = filealloc()) != 0){
+          np->ofile[i]->type = curproc->ofile[i]->type;
+          np->ofile[i]->ref = curproc->ofile[i]->ref;
+          np->ofile[i]->off = curproc->ofile[i]->off;
+          np->ofile[i]->readable = curproc->ofile[i]->readable;
+          np->ofile[i]->writable = curproc->ofile[i]->writable;
+          np->ofile[i]->ip = idup(curproc->ofile[i]->ip);
+        }
+      } 
+    }
+  }
   np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));

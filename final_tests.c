@@ -2,6 +2,7 @@
 #include "stat.h"
 #include "user.h"
 #include "mmu.h"
+#include "fcntl.h"
 typedef struct arg
 {
     int a;
@@ -121,6 +122,23 @@ void test_exec(){
     exit();
 }
 
+
+void
+test_9(void *arg1)
+{   
+    arg *ptr = (arg*)arg1;
+    int tid = gettid();
+    int pid = getpid();
+    char buf[30] = "HopeIsAGoodThing\n";
+    char arr[30];
+    t_acquire(&lock);
+    printf(1,"PID is %d and TID is %d\n",pid,tid);
+    write(ptr->a, buf, 19);
+    ptr->b = read(ptr->a, arr, 20);
+    printf(1, "Bytes Read: %d and content is: %s\n", ptr->b, arr);
+    close(ptr->a);
+    exit();  
+}
 
 int Test1(){
     arg arg1 = {10,20};
@@ -261,6 +279,25 @@ void Test7(){
     }
 }
 
+void Test9(){
+    char arr[32];
+    int pid = getpid();
+    int yes;
+    lock_init(&lock);
+    printf(1, "Parent PID : %d\n", pid);
+    int fd = open("backup", O_CREATE | O_RDWR);
+    arg arg1 = {fd, 20};
+    void *stack = sbrk(PGSIZE);
+    int thread_tid1 = clone(&test_9, &arg1,stack, CLONE_VM);
+    int join_tid1 = thread_join();
+    yes = read(fd, arr, 20);
+    printf(1, "Bytes Read: %d and content is: %s\n", yes, arr);
+    if(thread_tid1 == join_tid1){
+         printf(1,"TEST9 PASSED\n");
+    }
+   
+}
+
 void Test8(){
     int pid;
     pid = fork();
@@ -300,6 +337,7 @@ main(int argc, char *argv[])
     printf(1,"\n");
     Test8();
     printf(1,"\n");
+    Test9();
     if(test1 && test2 && test3 && test4 && test5 && test6){
         printf(1,"ALL TEST PASSED\n");
     }
