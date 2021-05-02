@@ -284,13 +284,7 @@ clone(void(*fcn)(void *), void *args, void *stack, int flag){
   for(i = 0; i < NOFILE; i++)
     if(curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
-  
-  if(flag & CLONE_FS){
-    np->cwd = curproc->cwd;
-  }
-  else{
-    np->cwd = idup(curproc->cwd);
-  }
+  np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
