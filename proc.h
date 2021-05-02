@@ -52,6 +52,7 @@ struct proc {
   void* stack;
   int is_thread;
   int tid;
+  int flag;
 };
 
 // Process memory is laid out contiguously, low addresses first:

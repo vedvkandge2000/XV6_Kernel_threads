@@ -211,6 +211,7 @@ fork(void)
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
   pid = np->pid;
+  np->tid = 0;
 
   acquire(&ptable.lock);
 
@@ -246,6 +247,7 @@ clone(void(*fcn)(void *), void *args, void *stack, int flag){
   }
   else{
     if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+      cprintf("....ERROR....\n");
       kfree(np->kstack);
       np->kstack = 0;
       np->state = UNUSED;
@@ -264,37 +266,36 @@ clone(void(*fcn)(void *), void *args, void *stack, int flag){
 
   np->stack = stack;  // The thread's stack
   np->sz = curproc->sz;
-  np->parent = curproc;
+  if(flag & CLONE_PARENT){
+    np->parent = curproc->parent;
+  }
+  else{
+    np->parent = curproc;
+  }
   *np->tf = *curproc->tf;
   np->is_thread = 1;
+  np->flag = flag;
   
   // Clear %eax so that clone returns 0 in the child.
   np->tf->eax = 0;
-
   np->tf->esp = (uint)stack_pointer;
   np->tf->eip = (uint)fcn;
 
+  for(i = 0; i < NOFILE; i++)
+    if(curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  
   if(flag & CLONE_FS){
-    for(i = 0; i < NOFILE; i++)
-      if(curproc->ofile[i])
-        np->ofile[i] = curproc->ofile[i];
+    np->cwd = curproc->cwd;
   }
   else{
-    for(i = 0; i < NOFILE; i++)
-      if(curproc->ofile[i])
-        np->ofile[i] = filedup(curproc->ofile[i]);
+    np->cwd = idup(curproc->cwd);
   }
-  np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
   np->tid = np->pid;
-  if(flag & CLONE_THREAD){
-    np->pid = curproc->pid;
-  }
-  else{
-    np->pid = np->pid;
-  }
+  np->pid = curproc->pid;
   tid = np->tid;
   acquire(&ptable.lock);
   np->state = RUNNABLE;
@@ -328,10 +329,24 @@ exit(void)
   end_op();
   curproc->cwd = 0;
 
-  acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
-  wakeup1(curproc->parent);
+  acquire(&ptable.lock);
+  if(curproc->flag & CLONE_PARENT){
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid == curproc->pid && !p->tid){
+        if(p->state == SLEEPING){
+          p->state = RUNNABLE;
+          break;
+        }  
+      }
+    }
+  }
+  else{
+    wakeup1(curproc->parent);
+  }
+  
+  
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -402,8 +417,24 @@ int join(void **stack){
     // Scan through table looking for exited children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if((p->parent != curproc) || (p->pgdir != curproc->pgdir) || (!p->is_thread))
-        continue;
+      if(p->flag & CLONE_VM){
+        if (p->flag & CLONE_PARENT){
+          if((p->parent != curproc->parent) || (p->pgdir != curproc->pgdir) || (!p->is_thread))
+            continue;
+        }
+        else{
+          if((p->parent != curproc)|| (p->pgdir != curproc->pgdir) || (!p->is_thread))
+            continue;
+        }
+      }
+      else if(p->flag & CLONE_PARENT){
+        if((p->parent != curproc->parent) || (!p->is_thread))
+          continue;
+      }
+      else{
+        if((p->parent != curproc) || (!p->is_thread))
+          continue;
+      }
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
@@ -417,6 +448,7 @@ int join(void **stack){
         p->killed = 0;
         p->state = UNUSED;
         *stack = p->stack;
+        // p->is_thread = 0;
         release(&ptable.lock);
         return tid;
       }
